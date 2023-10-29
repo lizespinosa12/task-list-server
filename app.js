@@ -2,6 +2,14 @@ const express = require('express');
 const app = express();
 const port = 4000;
 
+app.use(express.json());
+
+const listViewRouter = require('./list-view-router');
+const listEditRouter = require('./list-edit-router');
+
+app.use('/list-view', listViewRouter);
+app.use('/list-edit', listEditRouter);
+
 const tasks = [
   {
     id: '1',
