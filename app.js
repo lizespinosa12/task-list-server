@@ -9,10 +9,12 @@ const port = 4000;
 
 app.use(express.json());
 
-const listViewRouter = require('./list-view-router');
-const listEditRouter = require('./list-edit-router');
-app.use('/list-view', listViewRouter);
-app.use('/list-edit', listEditRouter);
+// Array de usuarios predefinidos
+const users = [
+  { username: 'usuario1', password: 'contrasena1' },
+  { username: 'usuario2', password: 'contrasena2' },
+  // Agrega más usuarios según sea necesario
+];
 
 const tasks = [
   {
@@ -42,12 +44,7 @@ const tasks = [
   },
 ];
 
-const users = [
-  { username: 'usuario1', password: 'contrasena1' },
-  { username: 'usuario2', password: 'contrasena2' },
-  // Agrega más usuarios según sea necesario
-];
-
+// Ruta de autenticación
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
 
@@ -62,6 +59,7 @@ app.post('/login', (req, res) => {
   res.json({ token, success: true });
 });
 
+// Ruta protegida
 app.get('/protected', authenticateToken, (req, res) => {
   res.json({ message: 'Ruta protegida alcanzada', success: true });
 });
@@ -82,10 +80,85 @@ function authenticateToken(req, res, next) {
   });
 }
 
+// Rutas para tareas
+
+// Obtener todas las tareas
 app.get('/tasks', (req, res) => {
-  res.json(tasks);
+  res.status(200).json(tasks);
+});
+
+// Obtener una tarea por ID
+app.get('/tasks/:taskId', (req, res) => {
+  const taskId = req.params.taskId;
+  const task = tasks.find((task) => task.id === taskId);
+
+  if (!task) {
+    return res.status(404).json({ error: 'Tarea no encontrada', success: false });
+  }
+
+  res.status(200).json({ task, success: true });
+});
+
+// Crear una nueva tarea
+app.post('/tasks', (req, res) => {
+  const { description } = req.body;
+
+  if (!description) {
+    return res.status(400).json({ error: 'La descripción de la tarea es requerida', success: false });
+  }
+
+  const newTask = {
+    id: uuid.v4(),
+    isCompleted: false,
+    description,
+  };
+
+  tasks.push(newTask);
+  res.status(201).json({ task: newTask, success: true });
+});
+
+// Actualizar una tarea
+app.put('/tasks/:taskId', (req, res) => {
+  const taskId = req.params.taskId;
+  const { description, isCompleted } = req.body;
+  const taskToUpdate = tasks.find((task) => task.id === taskId);
+
+  if (!taskToUpdate) {
+    return res.status(404).json({ error: 'Tarea no encontrada', success: false });
+  }
+
+  taskToUpdate.description = description || taskToUpdate.description;
+  taskToUpdate.isCompleted = isCompleted || taskToUpdate.isCompleted;
+
+  res.status(200).json({ task: taskToUpdate, success: true });
+});
+
+// Eliminar una tarea
+app.delete('/tasks/:taskId', (req, res) => {
+  const taskId = req.params.taskId;
+  const index = tasks.findIndex((task) => task.id === taskId);
+
+  if (index !== -1) {
+    const deletedTask = tasks.splice(index, 1)[0];
+    res.status(200).json({ task: deletedTask, success: true });
+  } else {
+    res.status(404).json({ error: 'Tarea no encontrada', success: false });
+  }
+});
+
+// Obtener tareas completas
+app.get('/tasks/completed', (req, res) => {
+  const completedTasks = tasks.filter((task) => task.isCompleted);
+  res.status(200).json({ tasks: completedTasks, success: true });
+});
+
+// Obtener tareas incompletas
+app.get('/tasks/incomplete', (req, res) => {
+  const incompleteTasks = tasks.filter((task) => !task.isCompleted);
+  res.status(200).json({ tasks: incompleteTasks, success: true });
 });
 
 app.listen(port, () => {
   console.log(`Servidor Express escuchando en el puerto ${port}`);
 });
+
